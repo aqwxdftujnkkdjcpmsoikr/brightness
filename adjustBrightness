@@ -1,0 +1,60 @@
+#! /usr/bin/bash
+
+increment=10
+
+readarray -t brights < brightness.txt
+briHDMI=${brights[0]}
+briDP4=${brights[1]}
+#manually add more variables if needed
+
+if [ "$1" = 'update' ]; then
+    xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > brightness.txt
+    exit
+elif [ "$1" = 'refresh' ]; then
+    foo=$(printf %.2f "$((briHDMI))e-2")
+    xrandr --output HDMI-0 --brightness "$foo"
+    foo=$(printf %.2f "$((briDP4))e-2")
+    xrandr --output DP-4 --brightness "$foo"
+    #manually update here
+    exit
+elif [ "$1" = '+' ]; then
+    if [[ -z "$2" || "$2" =~ HDMI-0 ]]; then
+        let briHDMI=briHDMI+increment
+        if [[ "$briHDMI" -gt "120" ]]; then
+            briHDMI="120"
+        fi
+        foo=$(printf %.2f "$((briHDMI))e-2")
+        xrandr --output HDMI-0 --brightness "$foo"
+        #echo "xrandr --output HDMI-0 --brightness \"$briHDMI\""
+    fi
+    if [[ -z "$2" || "$2" =~ DP-4 ]]; then
+        let briDP4=briDP4+increment
+        if [[ "$briDP4" -gt "120" ]]; then
+            briDP4="120"
+        fi
+        foo=$(printf %.2f "$((briDP4))e-2")
+        xrandr --output DP-4 --brightness "$foo"
+        #echo "xrandr --output DP-4 --brightness \"$briDP4\""
+    fi
+elif [ "$1" = '-' ]; then
+    if [[ -z "$2" || "$2" =~ HDMI-0 ]]; then
+        let briHDMI=briHDMI-increment
+        if [[ "$briHDMI" -lt "0" ]]; then
+            briHDMI="0"
+        fi
+        foo=$(printf %.2f "$((briHDMI))e-2")
+        xrandr --output HDMI-0 --brightness "$foo"
+        #echo "xrandr --output HDMI-0 --brightness \"$briHDMI\""
+    fi
+    if [[ -z "$2" || "$2" =~ DP-4 ]]; then
+        let briDP4=briDP4-increment
+        if [[ "$briDP4" -lt "0" ]]; then
+            briDP4="0"
+        fi
+        foo=$(printf %.2f "$((briDP4))e-2")
+        xrandr --output DP-4 --brightness "$foo"
+        #echo "xrandr --output DP-4 --brightness \"$briDP4\""
+    fi
+fi
+
+echo -e "$briHDMI\n$briDP4" > brightness.txt
