@@ -1,19 +1,77 @@
 #! /usr/bin/bash
 
+# Modify here
+# Increment in % of max brightness
 increment=10
-#In the order of 'xrandr --verbose' listing
-SCREENS=("HDMI-0" "DP-4")
-#manually add more names if needed
-
-readarray -t brights < brightness.txt
+# path to the folder where you want this script's files to be stored
+storageDir="$HOME/bashScripts/data" # apparently doesn't work with ~, use full path or $HOME
 
 
-if [ "$1" = 'update' ]; then
-    xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > brightness.txt
+
+
+#Options that work without files initialized
+if [[ "$1" = '-h' || "$1" = '--help' || "$1" = 'help' ]]; then
+    echo -e "\
+=====================================[AdjustBrightness]=====================================
+This script uses xrandr to adjust brightness of the screen (software adjustment).
+Modify the first lines of the script to change the default increment (10%) or the default
+ directory for storing the files used by this script.\n
+Usage : $0 [action] [targetScreen(s)]\n
+[action] can be :
+\t'-h' or '--help' : display this help and exit.\n
+\t'usage' : display some usage examples and exit.\n
+\t'init' : create and update all the files needed for the script (monitors' names)
+\t         and current brightness levels.\n
+\t'get-screens' : create and update the file containing your monitors' names.\n
+\t'update' : create and update the file containing your monitors' current brightnesses.\n
+\t'refresh' : (re)apply the stored brightness level to your monitors.\n
+\t'+' : Increment the target screen(s)'s brightness. If no target screen is specified,
+\t       increases the brightness of all connected screens.\n
+\t'-' : Decrement the target screen(s)'s brightness. If no target screen is specified,
+\t       decreases the brightness of all connected screens.\n
+[targetScreen(s)] should be one string.
+\tExample : \"HDMI-0 DP-4\" is valid.\n"
     exit
-elif [ "$1" = 'refresh' ]; then
+elif [ "$1" = 'usage' ]; then
+    echo -e "\
+Usage examples :\n
+\$> $0 init
+ Gets everything setup. You should probably launch this at startup.
+ Consider putting this in /etc/profile for example.
+
+\$> $0 +
+ Increases the brightness of all screens that are currently known to this script.
+
+\$> $0 - \"HDMI-0\"
+ Decreases the brightness of screen \"HDMI-0\" (if it can be found by xrandr and
+  is currently known by this script.)
+
+\$> $0 + "HDMI-0 DP-4"
+ Increases the brightness of screens \"HDMI-0\"  and \"DP-4\"(if they can be found
+  by xrandr and are currently known by this script.)"
+    exit
+elif [ "$1" = 'get-screens' ]; then
+    #In the order of 'xrandr --verbose' listing, grab connected screens names
+    xrandr --verbose | grep -Po "^([a-zA-Z\-0-9]+)(?= connected)" > "$storageDir/brightness-screens.txt"
+    exit
+elif [ "$1" = 'update' ]; then
+    xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > "$storageDir/brightness-level.txt"
+    exit
+elif [ "$1" = 'init' ]; then
+    #get screens and current brightnesses
+    xrandr --verbose | grep -Po "^([a-zA-Z\-0-9]+)(?= connected)" > "$storageDir/brightness-screens.txt"
+    xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > "$storageDir/brightness-level.txt"
+    exit
+fi
+
+
+readarray -t SCREENS < "$storageDir/brightness-screens.txt"
+readarray -t brights < "$storageDir/brightness-level.txt"
+
+
+if [ "$1" = 'refresh' ]; then
     for i in "${!brights[@]}"; do
-        foo=$(printf %.2f "$((brights[i]))e-2")
+        foo=$(printf %.2f "$((brights[i]))e-2") #"
         xrandr --output "${SCREENS[$i]}" --brightness "$foo"
     done
     exit
@@ -26,7 +84,7 @@ elif [ "$1" = '+' ]; then
                 brights[i]="120"
             fi
             #back to a float
-            foo=$(printf %.2f "$((brights[i]))e-2")
+            foo=$(printf %.2f "$((brights[i]))e-2") #"
             xrandr --output "${SCREENS[$i]}" --brightness "$foo"
         fi
     done
@@ -40,7 +98,7 @@ elif [ "$1" = '-' ]; then
                 brights[i]="0"
             fi
             #back to a float
-            foo=$(printf %.2f "$((brights[i]))e-2")
+            foo=$(printf %.2f "$((brights[i]))e-2") #"
             xrandr --output "${SCREENS[$i]}" --brightness "$foo"
         fi
     done
@@ -48,4 +106,4 @@ fi
 
 for i in "${!brights[@]}"; do
     echo "${brights[$i]}"
-done > brightness.txt
+done > "$storageDir/brightness-level.txt"
