@@ -1,59 +1,52 @@
 #! /usr/bin/bash
 
 increment=10
+#In the order of 'xrandr --verbose' listing
+SCREENS=("HDMI-0" "DP-4")
+#manually add more names if needed
 
 readarray -t brights < brightness.txt
-SCREEN1="HDMI-0"
-briSCREEN1=${brights[0]}
-SCREEN2="DP-4"
-briSCREEN2=${brights[1]}
-#manually add more variables if needed
+
 
 if [ "$1" = 'update' ]; then
     xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > brightness.txt
     exit
 elif [ "$1" = 'refresh' ]; then
-    foo=$(printf %.2f "$((briSCREEN1))e-2")
-    xrandr --output "$SCREEN1" --brightness "$foo"
+    foo=$(printf %.2f "$((brights[0]))e-2") #" dirty hack for coloration bug
+    xrandr --output "${SCREENS[0]}" --brightness "$foo"
     foo=$(printf %.2f "$((briSCREEN2))e-2")
-    xrandr --output "$SCREEN2" --brightness "$foo"
+    xrandr --output "${SCREENS[1]}" --brightness "$foo"
     #manually update here
     exit
 elif [ "$1" = '+' ]; then
-    if [[ -z "$2" || "$2" =~ "$SCREEN1" ]]; then
-        let briSCREEN1=briSCREEN1+increment
-        if [[ "$briSCREEN1" -gt "120" ]]; then
-            briSCREEN1="120"
+    for i in "${!brights[@]}"; do
+        if [[ -z "$2" || "$2" =~ "${SCREENS[$i]}" ]]; then
+            let brights[i]=brights[i]+increment
+            #prevent out of range (yes we authorize 20% of 'bonus' brightness to support overexposing if wanted)
+            if [[ "${brights[$i]}" -gt "120" ]]; then
+                brights[i]="120"
+            fi
+            #back to a float
+            foo=$(printf %.2f "$((brights[i]))e-2")
+            xrandr --output "${SCREENS[$i]}" --brightness "$foo"
         fi
-        foo=$(printf %.2f "$((briSCREEN1))e-2")
-        xrandr --output "$SCREEN1" --brightness "$foo"
-    fi
-    if [[ -z "$2" || "$2" =~ "$SCREEN2" ]]; then
-        let briSCREEN2=briSCREEN2+increment
-        if [[ "$briSCREEN2" -gt "120" ]]; then
-            briSCREEN2="120"
-        fi
-        foo=$(printf %.2f "$((briSCREEN2))e-2")
-        xrandr --output "$SCREEN2" --brightness "$foo"
-    fi
+    done
 elif [ "$1" = '-' ]; then
-    if [[ -z "$2" || "$2" =~ "$SCREEN1" ]]; then
-        let briSCREEN1=briSCREEN1-increment
-        if [[ "$briSCREEN1" -lt "0" ]]; then
-            briSCREEN1="0"
+    #for each index of screen
+    for i in "${!brights[@]}"; do
+        if [[ -z "$2" || "$2" =~ "${SCREENS[$i]}" ]]; then
+            let brights[i]=brights[i]-increment
+            #prevent out of range
+            if [[ "${brights[$i]}" -lt "0" ]]; then
+                brights[i]="0"
+            fi
+            #back to a float
+            foo=$(printf %.2f "$((brights[i]))e-2")
+            xrandr --output "${SCREENS[$i]}" --brightness "$foo"
         fi
-        foo=$(printf %.2f "$((briSCREEN1))e-2")
-        xrandr --output "$SCREEN1" --brightness "$foo"
-    fi
-    if [[ -z "$2" || "$2" =~ "$SCREEN2" ]]; then
-        let briSCREEN2=briSCREEN2-increment
-        if [[ "$briSCREEN2" -lt "0" ]]; then
-            briSCREEN2="0"
-        fi
-        foo=$(printf %.2f "$((briSCREEN2))e-2")
-        xrandr --output "$SCREEN2" --brightness "$foo"
-    fi
+    done
 fi
 
-echo -e "$briSCREEN1\n$briSCREEN2" > brightness.txt
-#manually update here too if you add screens
+for i in "${!brights[@]}"; do
+    echo "${brights[$i]}"
+done > brightness.txt
