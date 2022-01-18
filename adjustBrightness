@@ -12,11 +12,10 @@ if [ "$1" = 'update' ]; then
     xrandr --verbose | grep -m 2 -i brightness | cut -f2 -d ' ' | sed "s/^0\.//" | sed "s/\./0/" > brightness.txt
     exit
 elif [ "$1" = 'refresh' ]; then
-    foo=$(printf %.2f "$((brights[0]))e-2") #" dirty hack for coloration bug
-    xrandr --output "${SCREENS[0]}" --brightness "$foo"
-    foo=$(printf %.2f "$((briSCREEN2))e-2")
-    xrandr --output "${SCREENS[1]}" --brightness "$foo"
-    #manually update here
+    for i in "${!brights[@]}"; do
+        foo=$(printf %.2f "$((brights[i]))e-2")
+        xrandr --output "${SCREENS[$i]}" --brightness "$foo"
+    done
     exit
 elif [ "$1" = '+' ]; then
     for i in "${!brights[@]}"; do
